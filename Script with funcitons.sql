@@ -8,7 +8,7 @@ drop table ordencompramp;
 drop table osxop;
 drop table ordenproduccion;
 drop table lineaxsolicitud;
-drop table lineaxsolicitudhistorico
+drop table lineaxsolicitudhistorico;
 drop table prenda;
 drop table talla;
 drop table estilo;
@@ -36,6 +36,7 @@ drop table proveedornacional;
 drop table solicitudclientehistorico;
 drop table unidadmedida;
 drop table conjunto;
+drop table bitacoraerrores;
 
 drop view lineaxsolicitudhistorico_VIEW;
 drop view ordencompramp_VIEW;
@@ -76,6 +77,7 @@ DROP TYPE BANCO_TYPE force;
 DROP TYPE CLIENTE_TYPE force;
 DROP TYPE collectionlineaordencompramp force;
 DROP TYPE collectionlineassolicitud force;
+DROP TYPE collectionlineassolicitudh force;
 DROP TYPE collectionmpprov force;
 DROP TYPE collectionordenfaltante force;
 DROP TYPE collectionprenda force;
@@ -105,6 +107,9 @@ DROP TYPE COLLECTIONCUENTASBANCO FORCE;
 DROP TYPE collectionlordcommp FORCE
 DROP TYPE COLLECTIONMATPRiPROV FORCE;
 DROP TYPE SOLICITUDCLIENTE_TYPE FORCE;
+DROP TYPE SOLICITUDCLIENTEH_TYPE FORCE;
+DROP TYPE lineaoslicitudh_type force;
+drop type collectionlineassolicitudH force;
 
 CREATE OR REPLACE TYPE pais_type;
 /
@@ -128,6 +133,9 @@ CREATE OR REPLACE TYPE prenda_type;
 /
 
 CREATE OR REPLACE TYPE solicitudcliente_type;
+/
+
+CREATE OR REPLACE TYPE solicitudclienteH_type;
 /
 
 CREATE OR REPLACE TYPE ordenproduccion_type;
@@ -155,6 +163,9 @@ CREATE OR REPLACE TYPE cuentabanco_type;
 /
 
 CREATE OR REPLACE TYPE lineasolicitud_type;
+/
+
+CREATE OR REPLACE TYPE lineasolicitudh_type;
 /
 
 CREATE OR REPLACE TYPE lineaordencompramp_type;
@@ -398,6 +409,7 @@ CREATE OR REPLACE TYPE lineasolicitud_type AS OBJECT (
 ) NOT FINAL;
 /
 
+
 CREATE OR REPLACE TYPE materiaprimaproveedor_type AS OBJECT (
     idmateriaprima    NUMBER(5),
     udmedida          REF unidadmedida_type,
@@ -496,6 +508,7 @@ CREATE OR REPLACE TYPE ordenfaltante_type AS OBJECT (
 CREATE OR REPLACE TYPE collectionlineassolicitud IS
     TABLE OF REF lineasolicitud_type;
 /
+
 
 CREATE OR REPLACE TYPE collectionordenfaltante IS
     TABLE OF REF ordenfaltante_type;
@@ -695,19 +708,19 @@ CREATE TABLE banco OF banco_type (
 );
 
 CREATE TABLE cliente OF cliente_type (
-    cedula constraint nn_cl_1 NOT NULL,
-    direccionalcobro constraint nn_cl_2 NOT NULL,
-    telefono constraint nn_cl_2 NOT NULL,
-    correoelectronico constraint nn_cl_3 NOT NULL,
-    direccionexacta constraint nn_cl_4 NOT NULL,
-    paisnacimiento constraint nn_cl_5 NOT NULL,
-    apellidos constraint nn_cl_6 NOT NULL,
-    nombre constraint nn_cl_7 NOT NULL,
-    idpaisnacimiento constraint nn_cl_8 NOT NULL,
-    CONSTRAINT cliente_pkv2 PRIMARY KEY ( cedula )
+    cedula constraint nn_cli_1 NOT NULL,
+    direccionalcobro constraint nn_cli_2 NOT NULL,
+    telefono constraint nn_cli_9 NOT NULL,
+    correoelectronico constraint nn_cli_3 NOT NULL,
+    direccionexacta constraint nn_cli_4 NOT NULL,
+    paisnacimiento constraint nn_cli_5 NOT NULL,
+    apellidos constraint nn_cli_6 NOT NULL,
+    nombre constraint nn_cli_7 NOT NULL,
+    idpaisnacimiento constraint nn_cli_8 NOT NULL,
+    CONSTRAINT cliente_pkv3 PRIMARY KEY ( cedula )
 )
 NESTED TABLE solicitudes 
- STORE AS solicitudes;
+ STORE AS solicitudesCli;
  
 CREATE TABLE conjunto OF conjuntoprenda_type (
     idconjunto constraint nn_conp_2 NOT NULL,
@@ -775,27 +788,12 @@ CREATE TABLE lineaxsolicitud OF lineasolicitud_type (
     unidades constraint nn_lisol_3 NOT NULL,
     estadolineasolicitud constraint nn_lisol_4 NOT NULL,
     solicitud constraint nn_lisol_5 NOT NULL,
-    ordenproduccion constraint nn_lisol_6 NOT NULL,
     idsolicitud constraint nn_lisol_7 NOT NULL,
     idprenda constraint nn_lisol_8 NOT NULL,
-    idordenproduccion constraint nn_lisol_9 NOT NULL,
     CONSTRAINT table_6_pkv2 PRIMARY KEY ( idlineasolicitud,
                                           idsolicitud )
 );
 
-CREATE TABLE lineaxsolicitudhistorico OF lineasolicitud_type (
-    idlineasolicitud constraint nn_lisolh_1 NOT NULL,
-    prenda constraint nn_lisolh_2 NOT NULL,
-    unidades constraint nn_lisolh_3 NOT NULL,
-    estadolineasolicitud constraint nn_lisolh_4 NOT NULL,
-    solicitud constraint nn_lisolh_5 NOT NULL,
-    ordenproduccion constraint nn_lisolh_6 NOT NULL,
-    idsolicitud constraint nn_lisolh_7 NOT NULL,
-    idprenda constraint nn_lisolh_8 NOT NULL,
-    idordenproduccion constraint nn_lisolh_9 NOT NULL,
-    CONSTRAINT historico2_pkv2 PRIMARY KEY ( idlineasolicitud,
-                                          idsolicitud )
-);
 
 CREATE TABLE materiaprimaproveedor OF materiaprimaproveedor_type (
     idmateriaprima constraint nn_matpripro_1 NOT NULL,
@@ -936,18 +934,6 @@ CREATE TABLE solicitudcliente OF solicitudcliente_type (
 NESTED TABLE lineassolicitud 
 --  WARNING: Using column name as default storage_table name for nested column lineasSolicitud 
  STORE AS lineassolicitud;
- 
- CREATE TABLE solicitudclientehistorico OF solicitudcliente_type (
-    idsolicitud constraint nn_solicitudh_1 NOT NULL,
-    cliente constraint nn_solicitudh_2 NOT NULL,
-    fchsolicitud constraint nn_solicitudh_3 NOT NULL,
-    fchmaxima constraint nn_solicitudh_4 NOT NULL,
-    idcliente NOT NULL,
-    CONSTRAINT historico1_pkv2 PRIMARY KEY ( idsolicitud )
-)
-NESTED TABLE lineassolicitud
---  WARNING: Using column name as default storage_table name for nested column lineasSolicitud 
- STORE AS lineassolicitudhistorico;
 
 CREATE TABLE talla OF talla_type (
     idtalla constraint nn_talla_1 NOT NULL,
@@ -1812,3 +1798,62 @@ END;
 /
 
 --Tipos y tablas historicos
+
+CREATE OR REPLACE TYPE lineasolicitudh_type AS OBJECT (
+    idlineasolicitud       NUMBER(8),
+    prenda                 REF prenda_type,
+    unidades               NUMBER(5),
+    estadolineasolicitud   CHAR(1),
+    solicitud              REF solicitudclienteh_type,
+    ordenproduccion        REF ordenproduccion_type,
+    idsolicitud            NUMBER(12),
+    idprenda               NUMBER(5),
+    idordenproduccion      NUMBER(6),
+    usuarioModificacion VARCHAR(60),
+    fchModificacion DATE
+) NOT FINAL;
+/
+
+CREATE OR REPLACE TYPE collectionlineassolicitudH IS
+    TABLE OF REF lineasolicitudh_type;
+/
+
+CREATE OR REPLACE TYPE solicitudclienteh_type AS OBJECT (
+    idsolicitud       NUMBER(12),
+    lineassolicitud   collectionlineassolicitudh,
+    cliente          REF cliente_type,
+    fchsolicitud      DATE,
+    fchmaxima         DATE,
+    idcliente         NUMBER(12),
+    usuarioModificacion VARCHAR(60),
+    fchModificacion DATE
+) NOT FINAL;
+/
+
+CREATE TABLE lineaxsolicitudhistorico OF lineasolicitudh_type (
+    idlineasolicitud constraint nn_lisolh_1 NOT NULL,
+    prenda constraint nn_lisolh_2 NOT NULL,
+    unidades constraint nn_lisolh_3 NOT NULL,
+    estadolineasolicitud constraint nn_lisolh_4 NOT NULL,
+    solicitud constraint nn_lisolh_5 NOT NULL,
+    idsolicitud constraint nn_lisolh_7 NOT NULL,
+    idprenda constraint nn_lisolh_8 NOT NULL,
+    usuarioModificacion constraint nn_lisolh_10 NOT NULL,
+    fchModificacion constraint nn_lisolh_11 NOT NULL,
+    CONSTRAINT historico2_pkv2 PRIMARY KEY ( idlineasolicitud,
+                                          idsolicitud )
+);
+
+ CREATE TABLE solicitudclientehistorico OF solicitudclienteh_type (
+    idsolicitud constraint nn_solicitudhi_1 NOT NULL,
+    cliente constraint nn_solicitudhi_2 NOT NULL,
+    fchsolicitud constraint nn_solicitudhi_3 NOT NULL,
+    fchmaxima constraint nn_solicitudhi_4 NOT NULL,
+    idcliente constraint nn_solicitudhi_5 NOT NULL,
+    usuarioModificacion constraint nn_solicitudhi_6 NOT NULL,
+    fchModificacion constraint nn_solicitudhi_7 NOT NULL,
+    CONSTRAINT historicosol_pkv2 PRIMARY KEY ( idsolicitud )
+)
+NESTED TABLE lineassolicitud
+--  WARNING: Using column name as default storage_table name for nested column lineasSolicitud 
+ STORE AS solicitudeshistorico;
